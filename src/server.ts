@@ -54,7 +54,7 @@ app.use(limiter);
 
 // Health Check
 app.get('/health', (req, res) => {
-    res.json({ status: 'ok', env: env.NODE_ENV, timestamp: new Date().toISOString() });
+    res.json({ status: 'ok', env: env.NODE_ENV, version: 'build-fix-v1', timestamp: new Date().toISOString() });
 });
 
 // Routes
