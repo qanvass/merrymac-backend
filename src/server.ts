@@ -25,30 +25,32 @@ const limiter = rateLimit({
 
 // Middleware
 app.use(helmet());
+app.use(express.json()); // Phase 3: JSON Enforcement BEFORE routes
+app.use(morgan('dev'));
 
-// PHASE 1: CORS DEADLOCK FIX
-// Remove default '*' fallback. Enforce process.env.CORS_ORIGIN.
-const allowedOrigins = env.CORS_ORIGIN === '*' ? [] : env.CORS_ORIGIN.split(',');
-
-if (env.NODE_ENV === 'production' && allowedOrigins.length === 0) {
-    console.warn("⚠️  WARNING: CORS_ORIGIN is not set in production. Clients may be blocked.");
-}
+// Phase 5: CORS Validation
+const allowedOrigins = [
+    'https://merrymac.io',
+    'https://merrymac-ui.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:3001'
+];
 
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow mobile apps or curl (no origin) if allowed, otherwise block/check list
+        // Allow mobile apps or curl (no origin)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) !== -1 || env.CORS_ORIGIN === '*') {
+        if (allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
+            console.warn(`Blocked CORS origin: ${origin}`);
             callback(new Error('Not allowed by CORS'));
         }
     },
     credentials: true
 }));
+
 app.use(limiter);
-app.use(express.json());
-app.use(morgan('dev'));
 
 // Health Check
 app.get('/health', (req, res) => {
