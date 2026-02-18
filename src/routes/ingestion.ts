@@ -3,6 +3,11 @@ import { ingestionEngine } from '../engines/ingestion_engine';
 
 const router = express.Router();
 
+
+router.get('/health', (req, res) => {
+    res.json({ status: 'ingestion_active', time: new Date().toISOString() });
+});
+
 router.post('/upload', async (req, res) => {
     try {
         const { reportText, pageCount, fileMetadata } = req.body;

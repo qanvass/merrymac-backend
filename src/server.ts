@@ -64,7 +64,10 @@ app.use('/api/llm', llmRoutes);
 app.use('/api/vault', vaultRoutes);
 app.use('/api/email', emailRoutes);
 // Phase 1: Secure Intake & Phase 8: Data Retrieval
-app.use('/api/ingestion', ingestionRoutes);
+app.use('/api/ingestion', (req, res, next) => {
+    console.log(`[Ingestion Route Hit] ${req.method} ${req.url}`);
+    next();
+}, ingestionRoutes);
 app.use('/api/reports', reportsRoutes);
 
 // Error Handling
