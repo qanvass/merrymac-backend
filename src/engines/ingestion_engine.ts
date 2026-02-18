@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 export const ingestionEngine = {
     async processUpload(rawText: string, metadata: { fileName: string, pageCount: number }): Promise<string> {
-        console.log(`[Ingestion] Processing ${metadata.fileName}...`);
+        console.log(`[Ingestion] Processing ${metadata.fileName}... Received ${rawText.length} chars.`);
 
         // PHASE 1: SECURE INTAKE VALIDATION
         if (rawText.length < 100) {

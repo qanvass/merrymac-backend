@@ -25,7 +25,7 @@ const limiter = rateLimit({
 
 // Middleware
 app.use(helmet());
-app.use(express.json()); // Phase 3: JSON Enforcement BEFORE routes
+app.use(express.json({ limit: '50mb' })); // Phase 3: JSON Enforcement BEFORE routes
 app.use(morgan('dev'));
 
 // Phase 5: CORS Validation
