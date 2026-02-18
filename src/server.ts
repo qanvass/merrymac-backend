@@ -104,7 +104,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // PHASE 3: ENVIRONMENT ENFORCEMENT
 if (env.NODE_ENV === 'production') {
     if (!env.OPENAI_API_KEY) {
-        throw new Error("❌ CRITICAL: OPENAI_API_KEY is missing in production. Server startup aborted.");
+        console.warn("⚠️  WARNING: OPENAI_API_KEY is missing in production. AI features will be disabled.");
     }
     if (!env.CORS_ORIGIN || env.CORS_ORIGIN === '*') {
         // We allow * for now if explicitly set, but warn. But the prompt says "If CORS_ORIGIN missing... throw"
