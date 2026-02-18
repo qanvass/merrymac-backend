@@ -74,6 +74,25 @@ app.get('/api/ingestion-direct', (req, res) => {
     res.json({ status: 'direct_route_active' });
 });
 
+app.get('/debug-routes', (req, res) => {
+    const routes: any[] = [];
+    app._router.stack.forEach((middleware: any) => {
+        if (middleware.route) { // routes registered directly on the app
+            routes.push({
+                path: middleware.route.path,
+                methods: middleware.route.methods
+            });
+        } else if (middleware.name === 'router') { // router middleware
+            // This is trickier to get path for, but usually regex
+            routes.push({
+                name: 'router',
+                regexp: middleware.regexp.toString()
+            });
+        }
+    });
+    res.json({ routes });
+});
+
 app.use('/api/reports', reportsRoutes);
 
 // Error Handling
