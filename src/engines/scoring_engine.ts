@@ -2,54 +2,64 @@ import { CreditReport, SimulationResult } from '../types';
 
 export const scoringEngine = {
     simulate(report: CreditReport): SimulationResult {
-        // Mock baseline estimation (in real app, this would use a FICO model approximation)
-        const baseline = report.scores.equifax || 620;
-        let potentialGain = 0;
+        // FICO-like Algorithmic Simulation (Deterministic)
+        let baseline = report.scores.equifax || 620;
         const scenarios: SimulationResult['scenarios'] = [];
 
-        // 1. Simulate Removal of Negative Items
-        const collectionCount = report.collections.length;
-        if (collectionCount > 0) {
-            const gain = collectionCount * 15;
-            potentialGain += gain;
+        // 1. Payment History (35%) - Removal of Negatives
+        const collections = report.collections.length;
+        const derogatory = report.tradelines.filter(t => ['COLLECTION', 'CHARGE_OFF', 'LATE', 'REPO'].includes(t.status)).length;
+
+        if (collections > 0 || derogatory > 0) {
+            // Algorithm: Approx 40-80 points for clean-up depending on severity
+            const collectionImpact = collections * 15;
+            const derogatoryImpact = derogatory * 10;
+            const totalGain = Math.min(100, collectionImpact + derogatoryImpact); // Cap at 100 for safety
+
             scenarios.push({
-                name: "Removal of Collections",
-                impact: gain,
-                description: `Removing ${collectionCount} collection accounts could boost your score by approx ${gain} points.`
+                name: "Clean Slate Protocol (History)",
+                impact: totalGain,
+                description: `Removing ${collections} collections and ${derogatory} derogatory marks is projected to recover approx ${totalGain} points (Max 35% weight impact).`
             });
         }
 
-        // 2. Simulate Utilization Reduction
+        // 2. Utilization (30%)
         const totalLimit = report.tradelines.reduce((sum, t) => sum + t.limit, 0);
         const totalBalance = report.tradelines.reduce((sum, t) => sum + t.balance, 0);
         const currentUtil = totalLimit > 0 ? (totalBalance / totalLimit) : 0;
 
-        if (currentUtil > 0.3) {
-            const reductionGain = 25;
-            potentialGain += reductionGain;
+        if (currentUtil > 0.09) {
+            // Algorithm: Moving from >X% to <9%
+            let utilGain = 0;
+            if (currentUtil > 0.9) utilGain = 65;
+            else if (currentUtil > 0.5) utilGain = 45;
+            else if (currentUtil > 0.3) utilGain = 25;
+            else utilGain = 15;
+
             scenarios.push({
-                name: "Utilization to 10%",
-                impact: reductionGain,
-                description: `Reducing utilization from ${Math.round(currentUtil * 100)}% to 10% is projected to add ${reductionGain} points.`
+                name: "Utilization Optimization (<9%)",
+                impact: utilGain,
+                description: `Reducing utilization to optimal <9% threshold from ${(currentUtil * 100).toFixed(0)}% yields high impact.`
             });
         }
 
-        // 3. Simulate Inquiry Aging
-        const recentInquiries = report.inquiries.length;
+        // 3. Length of History (15%) - Inquiry Aging
+        // Algorithm: Hard inquiries fall off impact after 12m. 
+        const recentInquiries = report.inquiries.length; // Assuming these are all < 2 years
         if (recentInquiries > 2) {
-            const agingGain = 10;
-            potentialGain += agingGain;
+            const inqPoints = (recentInquiries - 2) * 5; // approx 5 pts per excessive inquiry
             scenarios.push({
-                name: "Inquiry Aging (>6 months)",
-                impact: agingGain,
-                description: "As your recent hard inquiries age past 6 months, you may recover approx 10 points."
+                name: "Inquiry Permissible Purpose Clean-up",
+                impact: inqPoints,
+                description: `Disputing ${recentInquiries - 2} non-permissible hard inquiries.`
             });
         }
 
+        const totalPotential = scenarios.reduce((sum, s) => sum + s.impact, 0);
         return {
             currentEstimate: baseline,
-            projectedScore: baseline + potentialGain,
-            potentialGain,
+            projectedScore: Math.min(850, baseline + totalPotential),
+            potentialGain: totalPotential,
             scenarios
         };
     }
