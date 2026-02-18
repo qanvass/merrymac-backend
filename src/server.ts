@@ -68,6 +68,12 @@ app.use('/api/ingestion', (req, res, next) => {
     console.log(`[Ingestion Route Hit] ${req.method} ${req.url}`);
     next();
 }, ingestionRoutes);
+
+// DEBUG DIRECT ROUTE
+app.get('/api/ingestion-direct', (req, res) => {
+    res.json({ status: 'direct_route_active' });
+});
+
 app.use('/api/reports', reportsRoutes);
 
 // Error Handling
