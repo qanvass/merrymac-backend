@@ -12,7 +12,7 @@ export const llmEngine = {
         console.log("[LLMEngine] Starting analysis...");
 
         // 1. Run Deterministic Forensics
-        const forensicIssues = await forensicEngine.scanReport(report);
+        const { violations: forensicIssues } = await forensicEngine.scanReport(report);
         const estimatedRecovery = forensicEngine.calculateScoreRecovery(forensicIssues);
 
         // 2. Prepare Data for LLM (Masked PII)

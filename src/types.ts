@@ -85,6 +85,7 @@ export interface Violation {
 export interface ForensicViolation extends Violation {
     legalBasis: string;
     recommendedAction: string;
+    removalProbabilityWeight?: number;
 }
 
 export interface AnalysisResult {
