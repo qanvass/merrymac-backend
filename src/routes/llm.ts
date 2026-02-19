@@ -1,5 +1,5 @@
 import express from 'express';
-import { llmEngine } from '../engines/llm_engine';
+import { llmEngine } from '../engine/llm_engine';
 
 const router = express.Router();
 

@@ -62,6 +62,7 @@ export interface CanonicalCase {
         average_age_of_credit: number; // Months
         oldest_account_age: number; // Months
         total_inquiries_last_12m: number;
+        fico_estimate?: number;
     };
 
     metadata: {

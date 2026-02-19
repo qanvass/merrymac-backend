@@ -89,12 +89,24 @@ export interface ForensicViolation extends Violation {
 }
 
 export interface AnalysisResult {
-    consensusReached: boolean;
-    violations: ForensicViolation[];
-    confidence: number;
-    reasoning: string;
-    estimatedRecovery: number;
+    consensusReached?: boolean;
+    violations?: ForensicViolation[];
+    confidence?: number;
+    reasoning?: string;
+    estimatedRecovery?: number;
     dualLLM?: any;
+    forensic_status?: string;
+    ai_audit_opinion?: string;
+    ai_legal_opinion?: string;
+    detected_violations?: Violation[];
+    ai_audit_results?: string;
+    ai_legal_results?: string;
+    estimated_score_recovery?: number;
+    scoring?: {
+        ficoEstimate: number;
+        riskLevel: string;
+        removalProbability: number;
+    };
 }
 
 export interface SimulationResult {

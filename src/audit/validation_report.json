@@ -1,0 +1,76 @@
+{
+  "timestamp": "2026-02-19T16:36:27.301Z",
+  "totalProfiles": 100,
+  "totalTimeMs": 5,
+  "avgLatencyMs": 0.046141999999996415,
+  "metrics": {
+    "truePositives": 100,
+    "falsePositives": 0,
+    "falseNegatives": 0,
+    "precision": 100,
+    "recall": 100,
+    "f1Score": 100
+  },
+  "sampleResults": [
+    {
+      "userId": "user-0",
+      "expectedCount": 0,
+      "foundCount": 0,
+      "latencyMs": 0.8314000000000306
+    },
+    {
+      "userId": "user-1",
+      "expectedCount": 0,
+      "foundCount": 0,
+      "latencyMs": 0.525600000000054
+    },
+    {
+      "userId": "user-2",
+      "expectedCount": 4,
+      "foundCount": 4,
+      "latencyMs": 0.40010000000006585
+    },
+    {
+      "userId": "user-3",
+      "expectedCount": 0,
+      "foundCount": 0,
+      "latencyMs": 0.0017999999998892235
+    },
+    {
+      "userId": "user-4",
+      "expectedCount": 0,
+      "foundCount": 0,
+      "latencyMs": 0.010999999999967258
+    },
+    {
+      "userId": "user-5",
+      "expectedCount": 0,
+      "foundCount": 0,
+      "latencyMs": 0.09410000000002583
+    },
+    {
+      "userId": "user-6",
+      "expectedCount": 4,
+      "foundCount": 4,
+      "latencyMs": 0.03590000000008331
+    },
+    {
+      "userId": "user-7",
+      "expectedCount": 0,
+      "foundCount": 0,
+      "latencyMs": 0.00029999999992469384
+    },
+    {
+      "userId": "user-8",
+      "expectedCount": 0,
+      "foundCount": 0,
+      "latencyMs": 0.006700000000023465
+    },
+    {
+      "userId": "user-9",
+      "expectedCount": 0,
+      "foundCount": 0,
+      "latencyMs": 0.08699999999998909
+    }
+  ]
+}
