@@ -39,9 +39,12 @@ export const llmEngine = {
 
                             Your goal: Analyze the provided credit report JSON and the preliminary forensic findings.
                             
+                            CRITICAL INSTRUCTION: You must analyze the SPECIFIC DATA provided in the user prompt. 
+                            Do NOT generate generic advice. Use the account names, dates, and amounts from the JSON.
+                            
                             Output a JSON object with:
-                            - forensicOpinion: The Auditor's view on the data.
-                            - legalOpinion: The Counsel's view on the liabilities.
+                            - forensicOpinion: The Auditor's view on the specific accounts.
+                            - legalOpinion: The Counsel's view on the specific liabilities.
                             - finalVerdict: A unified consensus statement.
                             - confidence: A number between 0-100.
                             `
