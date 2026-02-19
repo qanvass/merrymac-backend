@@ -107,6 +107,10 @@ app.get('/debug-routes', (req, res) => {
     res.json({ routes });
 });
 
+import jobsRoutes from './routes/jobs';
+
+app.use('/api/automation', automationRoutes);
+app.use('/api/jobs', jobsRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/chat', chatRoutes);
 

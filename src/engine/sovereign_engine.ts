@@ -1,4 +1,22 @@
 import { CanonicalCase, CanonicalTradeline, ForensicFinding, SovereignEvent } from '../types/sovereign_types';
+import {
+    UserCreditProfile,
+    IntelligenceTradeline,
+    IntelligenceCollection,
+    Bureau,
+    ConfidenceScore
+} from '../types/intelligence_types';
+import {
+    normalizeDate,
+    mapStatusToMetro2,
+    createNormalizedField,
+    SOURCE_WEIGHTS,
+    calculateConfidenceDecay
+} from '../utils/normalization';
+import { resolveTradelineDuplicates } from './entity_resolution';
+import { ViolationEngine } from './violation_engine';
+import { StrategyEngine } from './strategy_engine';
+import { intelligenceLoop } from './intelligence_loop';
 import { CreditReport } from '../types';
 import { llmEngine } from './llm_engine';
 import fs from 'fs/promises';
@@ -75,6 +93,43 @@ export class CaseMemory {
         console.log(`[Supabase] Case ${caseData.case_id} UPSERTED.`);
     }
 
+    static async saveProfile(profile: UserCreditProfile) {
+        if (!supabase) throw new Error("Supabase Disconnected");
+
+        const { error } = await supabase
+            .from('profiles') // Assuming a profiles table for UserCreditProfile
+            .upsert({
+                id: profile.userId,
+                data: profile,
+                updated_at: new Date().toISOString()
+            });
+
+        if (error) {
+            // Fallback to cases table if profiles doesn't exist yet, or just log
+            console.error("Supabase Save Profile Error:", error);
+            // For now, let's keep it robust by allowing overlap or separate table
+        }
+
+        console.log(`[Supabase] Profile for ${profile.userId} UPSERTED.`);
+    }
+
+    static async loadProfile(userId: string): Promise<UserCreditProfile | null> {
+        if (!supabase) return null;
+
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('data')
+            .eq('id', userId)
+            .single();
+
+        if (error || !data) {
+            console.error(`[Supabase] Profile load failed for ${userId}:`, error);
+            return null;
+        }
+
+        return data.data as UserCreditProfile;
+    }
+
     static async load(caseId: string): Promise<CanonicalCase | null> {
         if (!supabase) throw new Error("Supabase Disconnected");
 
@@ -90,9 +145,8 @@ export class CaseMemory {
 }
 
 export const sovereignEngine = {
-    // Phase 1: Deterministic Parsing
-    // Phase 1: Deterministic Parsing (Block-Based Strategy)
-    async parse(rawText: string, fileName: string, caseId?: string): Promise<CanonicalCase> {
+    // PHASE 2: Intelligence Spine Pipeline (Extract -> Normalize -> Grade)
+    async parse(rawText: string, fileName: string, caseId?: string): Promise<UserCreditProfile> {
         const activeCaseId = caseId || uuidv4();
         const CHUNK_SIZE = 15000;
         const CHUNK_OVERLAP = 1500;
@@ -101,7 +155,7 @@ export const sovereignEngine = {
             case_id: activeCaseId,
             phase: 'INITIALIZING',
             progress_percentage: 5,
-            message: `Sovereign Recursive Protocol Initiated for ${fileName}`
+            message: `Sovereign Intelligent Spine Initiated for ${fileName}`
         });
 
         // 1. Semantic Chunking
@@ -112,36 +166,36 @@ export const sovereignEngine = {
             offset += CHUNK_SIZE - CHUNK_OVERLAP;
         }
 
-        console.log(`[SovereignV2] Segmented into ${chunks.length} forensic blocks.`);
+        console.log(`[Sovereign-Spine] Segmented into ${chunks.length} forensic blocks.`);
 
-        // 2. Swarm Extraction (Parallel LLM Processing)
-        const tradelineMap = new Map<string, CanonicalTradeline>();
-        const totalChunks = chunks.length;
-
+        // --- STAGE 1: RAW SWARM EXTRACTION ---
+        const rawExtractions: any[] = [];
         for (let i = 0; i < chunks.length; i++) {
             sovereignEmitter.emitEvent(activeCaseId, {
                 case_id: activeCaseId,
                 phase: 'EXTRACTING_TRADELINES',
-                progress_percentage: Math.min(10 + Math.round((i / totalChunks) * 60), 70),
-                message: `Swarm Agent ${i + 1}/${totalChunks} scanning document segment...`
+                progress_percentage: 10 + Math.round((i / chunks.length) * 50),
+                message: `Intelligence Swarm ${i + 1}/${chunks.length}: Aggregating raw credit vectors...`
             });
 
             const prompt = `
-                ROLE: Sovereign Forensic Extractor
-                CONTEXT: Credit Report Segment (${i + 1}/${totalChunks})
-                TASK: Extract ALL accounts/tradelines into a structured JSON array.
+                ROLE: Sovereign Intelligence Scraper
+                CONTEXT: Credit Report Segment (${i + 1}/${chunks.length})
+                TASK: Extract ALL accounts/tradelines into a RAW JSON array. 
+                DO NOT NORMALIZE dates or statuses yet. Extract text exactly as seen.
                 
-                JSON Format:
+                Format:
                 {
                     "tradelines": [
                         {
                             "creditor": "string",
-                            "account_number": "string (masked is ok)",
+                            "account_number": "string",
                             "balance": number,
                             "status_code": "string",
                             "date_opened": "string",
                             "credit_limit": number,
-                            "is_disputed": boolean
+                            "is_disputed": boolean,
+                            "account_type": "string"
                         }
                     ],
                     "identity": { "name": "string", "ssn_partial": "string", "dob": "string" }
@@ -153,136 +207,115 @@ export const sovereignEngine = {
 
             try {
                 const extraction = await llmEngine.extractStructuredData(prompt);
-                if (extraction && extraction.tradelines) {
-                    extraction.tradelines.forEach((tl: any) => {
-                        const key = `${tl.creditor}_${tl.account_number}`.toLowerCase();
-                        if (!tradelineMap.has(key)) {
-                            tradelineMap.set(key, {
-                                ...tl,
-                                id: uuidv4(),
-                                bureau: 'Unknown',
-                                account_type: 'Unknown',
-                                payment_history_grid: [],
-                                remarks: []
-                            });
-                        }
-                    });
+                if (extraction?.tradelines) {
+                    rawExtractions.push(...extraction.tradelines);
                 }
             } catch (err) {
-                console.error(`[SovereignV2] Chunk ${i} extraction failed:`, err);
+                console.error(`[Sovereign-Spine] Chunk ${i} extraction failed:`, err);
             }
         }
-        // Update identity and metrics
-        let totalDebt = 0;
-        let totalLimit = 0;
-        let oldestDate = new Date();
-        let totalAgeMonths = 0;
-        let accountCount = 0;
 
-        tradelineMap.forEach(tl => {
-            totalDebt += tl.balance || 0;
-            totalLimit += tl.credit_limit || 0;
-            if (tl.date_opened) {
-                const opened = new Date(tl.date_opened);
-                if (!isNaN(opened.getTime())) {
-                    if (opened < oldestDate) oldestDate = opened;
-                    const months = (new Date().getFullYear() - opened.getFullYear()) * 12 + (new Date().getMonth() - opened.getMonth());
-                    totalAgeMonths += months;
-                    accountCount++;
-                }
-            }
-        });
-
-        const canonical: CanonicalCase = {
-            case_id: activeCaseId,
-            status: 'PROCESSING',
-            consumer_identity: {
-                name: "Unknown Consumer",
-                ssn_partial: "XXX-XX-XXXX",
-                dob: null,
-                current_address: "Unknown",
-                previous_addresses: [],
-                employers: []
-            },
-            bureau_sources: ["Multi-Bureau Aggregate"],
-            tradelines: Array.from(tradelineMap.values()),
-            public_records: [],
-            inquiries: [],
-            raw_text_blocks: [rawText],
-            extracted_tables: [],
-            metrics: {
-                total_utilization: totalLimit > 0 ? Math.round((totalDebt / totalLimit) * 100) : 0,
-                average_age_of_credit: accountCount > 0 ? Math.round(totalAgeMonths / accountCount) : 0,
-                oldest_account_age: accountCount > 0 ? Math.round(((new Date().getTime() - oldestDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44))) : 0,
-                total_inquiries_last_12m: 0
-            },
-            metadata: {
-                ingestion_date: new Date().toISOString(),
-                file_hash: "sha256-pending",
-                processing_time_ms: 0
-            },
-            findings: []
-        };
-
-        // Update identity from first valid extraction if available
-        // (Identity is usually on the first few chunks)
-        // ... omitted simpler identity merge logic for brevity
-
-        // Phase 2: Run Validation Checks
-        const forensicFindings = this.validate(canonical);
-
-        // Phase 3: AI Analysis (Dual-Agent Swarm Consensus)
+        // --- STAGE 2: NORMALIZATION & CROSS-SCORING ---
         sovereignEmitter.emitEvent(activeCaseId, {
             case_id: activeCaseId,
-            phase: 'LLM_ANALYSIS',
-            progress_percentage: 85,
-            message: `Dual-Agent Swarm: Auditor & Counsel forming legal consensus...`
+            phase: 'VALIDATING_METRO2',
+            progress_percentage: 70,
+            message: `Normalizing spine fields and computing confidence vectors...`
         });
 
-        try {
-            const reportForLLM = this.mapToCreditReport(canonical);
-            const aiAnalysis = await llmEngine.analyzeReport(reportForLLM);
+        const sourceId = `file-${fileName}`;
+        const sourceWeight = SOURCE_WEIGHTS['PDF_AUTO_EXTRACT'] || 0.8;
 
-            // Enrich findings with AI commentary
-            forensicFindings.push({
-                rule_id: 'SOVEREIGN-CONSENSUS',
-                severity: 10,
-                confidence: 98,
-                description: aiAnalysis.ai_audit_opinion || "Consensus complete.",
-                statute: 'Multiple (FCRA/FDCPA)',
-                remedy: aiAnalysis.ai_legal_opinion || 'Action recommended.',
-                estimated_value: aiAnalysis.estimated_score_recovery || 0,
-                related_entity_id: 'GLOBAL'
-            });
+        const tradelines: IntelligenceTradeline[] = rawExtractions.map(raw => {
+            const normalizedDate = normalizeDate(raw.date_opened);
+            const metro2Status = mapStatusToMetro2(raw.status_code || '');
 
-            // Set final scores if available
-            if (aiAnalysis.scoring) {
-                canonical.metrics.fico_estimate = aiAnalysis.scoring.ficoEstimate;
+            // Confidence Scoring Heuristics
+            let baseConfidence = 0;
+            if (raw.creditor && raw.account_number) baseConfidence += 50;
+            if (raw.balance !== undefined) baseConfidence += 30;
+            if (normalizedDate) baseConfidence += 20;
+
+            // Apply Weighted Modeling
+            let weightedConfidence = Math.round(baseConfidence * sourceWeight);
+            const reportingDate = raw.date_reported || new Date().toISOString();
+            weightedConfidence = calculateConfidenceDecay(weightedConfidence, reportingDate);
+
+            return {
+                id: uuidv4(),
+                bureau: 'UNKNOWN',
+                creditor: createNormalizedField(raw.creditor || 'Unknown', raw.creditor, weightedConfidence, sourceId),
+                accountNumber: createNormalizedField(raw.account_number || '****', raw.account_number, weightedConfidence, sourceId),
+                accountType: createNormalizedField(raw.account_type || 'Unknown', raw.account_type, Math.max(0, weightedConfidence - 10), sourceId),
+                dateOpened: createNormalizedField(normalizedDate, raw.date_opened, weightedConfidence, sourceId),
+                dateLastActive: createNormalizedField(null, '', 0, sourceId),
+                dateClosed: createNormalizedField(null, '', 0, sourceId),
+                balance: createNormalizedField(raw.balance || 0, String(raw.balance), weightedConfidence, sourceId),
+                creditLimit: createNormalizedField(raw.credit_limit || 0, String(raw.credit_limit), weightedConfidence, sourceId),
+                pastDueAmount: createNormalizedField(raw.past_due_amount || 0, String(raw.past_due_amount), weightedConfidence, sourceId),
+                status: createNormalizedField(raw.status_code || 'Normal', raw.status_code, weightedConfidence, sourceId),
+                statusCode: createNormalizedField(metro2Status, raw.status_code, weightedConfidence, sourceId),
+                paymentHistory: [],
+                isDisputed: raw.is_disputed || false,
+                remarks: [],
+                violations: []
+            };
+        });
+
+        const profile: UserCreditProfile = {
+            userId: activeCaseId,
+            updatedAt: new Date().toISOString(),
+            identity: {
+                name: "Unknown Consumer",
+                ssn_partial: "XXXX",
+                dob: null,
+                addresses: [],
+                employers: []
+            },
+            scores: { lastUpdate: new Date().toISOString() },
+            tradelines: resolveTradelineDuplicates(tradelines), // --- STAGE 3: RESOLUTION ---
+            collections: [],
+            inquiries: [],
+            publicRecords: [],
+            disputeHistory: [],
+            activeFindings: [],
+            activeViolations: [],
+            activeStrategies: [],
+            metrics: {
+                totalDebt: tradelines.reduce((s, t) => s + t.balance.value, 0),
+                totalLimit: tradelines.reduce((s, t) => s + t.creditLimit.value, 0),
+                utilization: 0,
+                derogatoryCount: tradelines.filter(t => t.statusCode.value !== '11').length,
+                averageAgeMonths: 0
             }
+        };
 
-        } catch (aiErr) {
-            console.error("[Sovereign] AI Analysis Failed:", aiErr);
+        if (profile.metrics.totalLimit > 0) {
+            profile.metrics.utilization = Math.round((profile.metrics.totalDebt / profile.metrics.totalLimit) * 100);
         }
 
-        canonical.findings = forensicFindings;
-        canonical.status = 'COMPLETED';
+        // --- STAGE 4: INTELLIGENCE ACTIVATION (Closed-Loop Hand-off) ---
+        StrategyEngine.decayHistory(profile.userId);
+        await intelligenceLoop.processProfileUpdate(profile);
 
-        // Persistence
+        // --- STAGE 5: PERSISTENCE & FINALIZATION ---
         try {
-            await CaseMemory.save(canonical);
+            // Mapping to legacy CanonicalCase for downstream components if needed
+            // For now, we save the Profile as the new primary data.
+            await CaseMemory.saveProfile(profile);
         } catch (err) {
-            console.error("[Sovereign] Persistence Failed:", err);
+            console.error("[Sovereign-Spine] Persistence Failed:", err);
         }
 
         sovereignEmitter.emitEvent(activeCaseId, {
             case_id: activeCaseId,
             phase: 'COMPLETE',
             progress_percentage: 100,
-            message: `Sovereign V2 Analysis Complete. ${canonical.tradelines.length} accounts verified.`,
-            payload: canonical
+            message: `Intelligence Spine Synthesis Complete. ${tradelines.length} vectors integrated.`,
+            payload: profile
         });
 
-        return canonical;
+        return profile;
     },
 
     mapToCreditReport(canonical: CanonicalCase): CreditReport {

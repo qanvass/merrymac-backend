@@ -1,0 +1,22 @@
+
+--- SCENARIO 1: CONFIDENCE DRIFT & RESET OSCILLATION ---
+Month 1: Removal Probability = 40% (Failures accumulated: 1)
+Month 2: Removal Probability = 40% (Failures accumulated: 2)
+Month 3: Removal Probability = 40% (Failures accumulated: 3)
+Month 4: Removal Probability = 40% (Failures accumulated: 4)
+Month 5: Removal Probability = 40% (Failures accumulated: 5)
+Month 6: Removal Probability = 40% (Failures accumulated: 6)
+Month 7: Removal Probability = 40% (Failures accumulated: 7)
+Month 8: Removal Probability = 40% (Failures accumulated: 8)
+Month 9: Removal Probability = 40% (Failures accumulated: 9)
+Month 10: Removal Probability = 40% (Failures accumulated: 10)
+Month 11: Removal Probability = 40% (Failures accumulated: 11)
+Month 12: Removal Probability = 40% (Failures accumulated: 12)
+
+--- SCENARIO 2: STRATEGY SELECTION BIAS ---
+Difficult Creditor (creditor-hard) Probability: 10%
+Easy Creditor (creditor-easy) Probability: 55%
+
+--- SCENARIO 3: COOLDOWN GRANULARITY ---
+Strategies generated: 1
+Violations addressed in first strategy: 2

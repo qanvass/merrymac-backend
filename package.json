@@ -30,6 +30,7 @@
         "axios": "^1.13.5",
         "chromium": "^3.0.3",
         "cors": "^2.8.5",
+        "date-fns": "^4.1.0",
         "dotenv": "^16.4.5",
         "express": "^4.19.2",
         "express-rate-limit": "^8.2.1",
