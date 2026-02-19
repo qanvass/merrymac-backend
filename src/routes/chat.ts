@@ -1,6 +1,7 @@
 import express from 'express';
 import { llmEngine } from '../engines/llm_engine';
 import { CaseMemory } from '../engines/sovereign_engine';
+import { chatMemory } from '../services/chat_memory';
 import { sovereignEmitter } from '../events/sovereign_events';
 
 const router = express.Router();
@@ -40,9 +41,21 @@ router.post('/query', async (req, res) => {
             }
         }
 
-        // 2. Execute LLM Query with Context
-        // We use a simplified version of analyzeReport logic or a dedicated chat prompt
-        const response = await llmEngine.chat(prompt, context);
+        // 2. Fetch Conversation History
+        const history = caseId ? await chatMemory.getHistory(caseId) : [];
+
+        // 3. Save User Message
+        if (caseId) {
+            await chatMemory.saveMessage({ case_id: caseId, role: 'user', content: prompt });
+        }
+
+        // 4. Execute LLM Query with Context & History
+        const response = await llmEngine.chat(prompt, context, history);
+
+        // 5. Save Assistant Response
+        if (caseId) {
+            await chatMemory.saveMessage({ case_id: caseId, role: 'assistant', content: response });
+        }
 
         res.json({
             text: response,
