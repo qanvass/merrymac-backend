@@ -18,13 +18,16 @@ import automationRoutes from './routes/automation';
 const app = express();
 
 // Trust Proxy for Railway/Vercel Load Balancers
-app.set('trust proxy', 1);
+app.set('trust proxy', 2);
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     limit: 100, // Limit each IP to 100 requests per windowMs
     standardHeaders: 'draft-7',
     legacyHeaders: false,
+    validate: {
+        xForwardedForHeader: false // Prevent Railway proxy crash
+    }
 });
 
 // Middleware
