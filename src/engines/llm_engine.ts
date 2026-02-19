@@ -3,10 +3,8 @@ import { env } from '../config/env';
 import { AnalysisResult, CreditReport } from '../types';
 import { forensicEngine } from './forensic_engine';
 
-const SERVICE_ACCOUNT_KEY = "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";
-
 const openai = new OpenAI({
-    apiKey: env.OPENAI_API_KEY || SERVICE_ACCOUNT_KEY,
+    apiKey: env.OPENAI_API_KEY,
 });
 
 export const llmEngine = {
@@ -28,7 +26,7 @@ export const llmEngine = {
         };
 
         // 3. Dual-Swarm Simulation (If API Key Present)
-        if (env.OPENAI_API_KEY || SERVICE_ACCOUNT_KEY) {
+        if (env.OPENAI_API_KEY) {
             try {
                 const completion = await openai.chat.completions.create({
                     model: "gpt-4-turbo",
@@ -79,7 +77,7 @@ export const llmEngine = {
     async chat(prompt: string, context: string): Promise<string> {
         console.log("[LLMEngine] Processing chat query...");
 
-        if (env.OPENAI_API_KEY || SERVICE_ACCOUNT_KEY) {
+        if (env.OPENAI_API_KEY) {
             try {
                 const completion = await openai.chat.completions.create({
                     model: "gpt-4-turbo",

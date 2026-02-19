@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 
-const KEY = "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";
+const KEY = process.env.OPENAI_API_KEY;
 
 async function verify() {
     const openai = new OpenAI({ apiKey: KEY });
