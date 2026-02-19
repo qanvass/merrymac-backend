@@ -14,6 +14,7 @@ import emailRoutes from './routes/email';
 import ingestionRoutes from './routes/ingestion';
 import reportsRoutes from './routes/reports';
 import automationRoutes from './routes/automation';
+import chatRoutes from './routes/chat';
 
 const app = express();
 
@@ -101,6 +102,7 @@ app.get('/debug-routes', (req, res) => {
 });
 
 app.use('/api/reports', reportsRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Error Handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

@@ -97,5 +97,40 @@ export const llmEngine = {
                 finalVerdict: "Proceed with enforcement actions."
             }
         };
+    },
+
+    async chat(prompt: string, context: string): Promise<string> {
+        console.log("[LLMEngine] Processing chat query...");
+
+        if (env.OPENAI_API_KEY) {
+            try {
+                const completion = await openai.chat.completions.create({
+                    model: "gpt-4-turbo",
+                    messages: [
+                        {
+                            role: "system",
+                            content: `You are the MerryMac Sovereign Oracle. 
+                            Your goal is to provide expert-level forensic analysis and legal guidance on credit reports.
+                            Use the following context to answer the user's question precisely.
+                            
+                            CONTEXT:
+                            ${context}
+                            
+                            CRITICAL: Be professional, aggressive in dispute strategy, and always cite relevant statutes (FCRA/FDCPA) where applicable.`
+                        },
+                        {
+                            role: "user",
+                            content: prompt
+                        }
+                    ]
+                });
+
+                return completion.choices[0].message.content || "I am unable to process that at the moment.";
+            } catch (error) {
+                console.error("[LLMEngine] Chat API Error:", error);
+            }
+        }
+
+        return "Sovereign Mode is currently running in simulation. Please verify API connectivity for real-time intelligence.";
     }
 };
