@@ -68,6 +68,8 @@ export interface CanonicalCase {
         ingestion_date: string;
         file_hash: string; // For de-duplication
         processing_time_ms: number;
+        ai_audit_opinion?: string;
+        ai_legal_opinion?: string;
     };
 
     // Phase 2 output
@@ -77,7 +79,7 @@ export interface CanonicalCase {
 // Sovereign SSE Event for UI Streaming
 export interface SovereignEvent {
     case_id: string;
-    phase: 'INITIALIZING' | 'PARSING_TEXT' | 'EXTRACTING_TRADELINES' | 'VALIDATING_METRO2' | 'SCORING' | 'COMPLETE' | 'ERROR';
+    phase: 'INITIALIZING' | 'PARSING_TEXT' | 'EXTRACTING_TRADELINES' | 'LLM_ANALYSIS' | 'VALIDATING_METRO2' | 'SCORING' | 'COMPLETE' | 'ERROR';
     progress_percentage: number;
     message: string;
     payload?: any; // Partial data or final result

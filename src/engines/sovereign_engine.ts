@@ -1,4 +1,6 @@
 import { CanonicalCase, CanonicalTradeline, ForensicFinding, SovereignEvent } from '../types/sovereign_types';
+import { CreditReport } from '../types';
+import { llmEngine } from './llm_engine';
 import fs from 'fs/promises';
 import path from 'path';
 import { sovereignEmitter } from '../events/sovereign_events';
@@ -90,12 +92,12 @@ export class CaseMemory {
 export const sovereignEngine = {
     // Phase 1: Deterministic Parsing
     // Phase 1: Deterministic Parsing (Block-Based Strategy)
-    async parse(rawText: string, fileName: string): Promise<CanonicalCase> {
-        const caseId = uuidv4();
+    async parse(rawText: string, fileName: string, caseId?: string): Promise<CanonicalCase> {
+        const activeCaseId = caseId || uuidv4();
 
         // Emit Initial Event
-        sovereignEmitter.emitEvent(caseId, {
-            case_id: caseId,
+        sovereignEmitter.emitEvent(activeCaseId, {
+            case_id: activeCaseId,
             phase: 'INITIALIZING',
             progress_percentage: 5,
             message: `Sovereign Protocol Initiated for ${fileName}`
@@ -172,7 +174,7 @@ export const sovereignEngine = {
         console.log(`[Sovereign] Extracted ${tradelines.length} tradelines via Block Parser.`);
 
         const canonical: CanonicalCase = {
-            case_id: caseId,
+            case_id: activeCaseId,
             status: 'PROCESSING',
             consumer_identity: {
                 name: nameMatch ? nameMatch[1].trim() : "Unknown Subject",
@@ -202,8 +204,8 @@ export const sovereignEngine = {
             findings: []
         };
 
-        sovereignEmitter.emitEvent(caseId, {
-            case_id: caseId,
+        sovereignEmitter.emitEvent(activeCaseId, {
+            case_id: activeCaseId,
             phase: 'EXTRACTING_TRADELINES',
             progress_percentage: 50,
             message: `Identified ${tradelines.length} tradelines via Deep Scan.`
@@ -213,8 +215,43 @@ export const sovereignEngine = {
         canonical.status = 'COMPLETED';
 
         // Phase 2: Run Validation Checks
-        const findings = this.validate(canonical);
-        canonical.findings = findings;
+        const forensicFindings = this.validate(canonical);
+
+        // Phase 3: AI Analysis (LLM Reality Enforcement)
+        sovereignEmitter.emitEvent(activeCaseId, {
+            case_id: activeCaseId,
+            phase: 'LLM_ANALYSIS',
+            progress_percentage: 75,
+            message: `Initiating Dual-Swarm AI Consensus Analysis...`
+        });
+
+        try {
+            const reportForLLM = this.mapToCreditReport(canonical);
+            const aiAnalysis = await llmEngine.analyzeReport(reportForLLM);
+
+            // Enrich findings with AI commentary
+            forensicFindings.push({
+                rule_id: 'AI-CONSENSUS',
+                severity: 10,
+                confidence: Math.round(aiAnalysis.confidence * 100),
+                description: aiAnalysis.reasoning,
+                statute: 'FCRA / AI-CONSENSUS',
+                remedy: aiAnalysis.dualLLM?.finalVerdict || 'Legal action recommended.',
+                estimated_value: aiAnalysis.estimatedRecovery,
+                related_entity_id: 'GLOBAL'
+            });
+
+            // If we have specific AI opinions, store them as metadata or separate findings
+            if (aiAnalysis.dualLLM) {
+                canonical.metadata.ai_audit_opinion = aiAnalysis.dualLLM.forensicOpinion;
+                canonical.metadata.ai_legal_opinion = aiAnalysis.dualLLM.legalOpinion;
+            }
+
+        } catch (aiErr) {
+            console.error("[Sovereign] AI Analysis Failed:", aiErr);
+        }
+
+        canonical.findings = forensicFindings;
 
         // Initialize Memory
         try {
@@ -224,15 +261,57 @@ export const sovereignEngine = {
             console.error("[Sovereign] Persistence Failed (Expected in Test Mode):", err);
         }
 
-        sovereignEmitter.emitEvent(caseId, {
-            case_id: caseId,
+        // Final Update
+        canonical.status = 'COMPLETED';
+
+        sovereignEmitter.emitEvent(activeCaseId, {
+            case_id: activeCaseId,
             phase: 'COMPLETE',
             progress_percentage: 100,
-            message: `Sovereign Analysis Complete. Found ${findings.length} violations.`,
+            message: `Sovereign Analysis Complete. Found ${forensicFindings.length} violations.`,
             payload: canonical
         });
 
         return canonical;
+    },
+
+    mapToCreditReport(canonical: CanonicalCase): CreditReport {
+        return {
+            id: canonical.case_id,
+            uploadDate: canonical.metadata.ingestion_date,
+            fileName: "Sovereign_Report.pdf",
+            rawPages: canonical.raw_text_blocks,
+            personalInfo: {
+                name: canonical.consumer_identity.name,
+                dob: canonical.consumer_identity.dob || "",
+                ssn: canonical.consumer_identity.ssn_partial,
+                addresses: [],
+                employers: []
+            },
+            scores: { experian: 0, transunion: 0, equifax: 0 },
+            tradelines: canonical.tradelines.map(t => ({
+                id: t.id,
+                creditor: t.creditor,
+                accountNumber: t.account_number,
+                status: t.status_code as any,
+                balance: t.balance,
+                limit: t.credit_limit,
+                openedDate: t.date_opened || new Date().toISOString(),
+                paymentHistory: [],
+                agencies: { experian: true, transunion: true, equifax: true },
+                notes: t.account_type
+            })),
+            collections: [],
+            inquiries: [],
+            publicRecords: [],
+            summary: {
+                totalDebt: canonical.tradelines.reduce((s, t) => s + t.balance, 0),
+                utilization: canonical.metrics.total_utilization,
+                derogatoryCount: canonical.tradelines.filter(t => t.status_code !== 'OK').length,
+                averageAgeYears: canonical.metrics.average_age_of_credit,
+                oldestAccountYears: canonical.metrics.oldest_account_age
+            }
+        };
     },
 
     // Phase 2: Deterministic Scoring / Validation
