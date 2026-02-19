@@ -28,7 +28,7 @@ export const llmEngine = {
         };
 
         // 3. Dual-Swarm Simulation (If API Key Present)
-        if (env.OPENAI_API_KEY) {
+        if (env.OPENAI_API_KEY || SERVICE_ACCOUNT_KEY) {
             try {
                 const completion = await openai.chat.completions.create({
                     model: "gpt-4-turbo",
@@ -38,73 +38,48 @@ export const llmEngine = {
                             content: `You are the MerryMac Dual-Core Consensus Engine.
                             Role 1: Forensic Auditor (Aggressive, detailed, tech-focused).
                             Role 2: Legal Counsel (Prudent, citadel-focused, citation-heavy).
-
-                            Your goal: Analyze the provided credit report JSON and the preliminary forensic findings.
                             
-                            CRITICAL INSTRUCTION: You must analyze the SPECIFIC DATA provided in the user prompt. 
-                            Do NOT generate generic advice. Use the account names, dates, and amounts from the JSON.
+                            Your goal is to find actionable violations of FCRA, FDCPA, and state consumer laws.
+                            The Forensic Auditor finds the discrepancy. The Legal Counsel provides the statute.
                             
-                            Output a JSON object with:
-                            - forensicOpinion: The Auditor's view on the specific accounts.
-                            - legalOpinion: The Counsel's view on the specific liabilities.
-                            - finalVerdict: A unified consensus statement.
-                            - confidence: A number between 0-100.
-                            `
+                            CRITICAL: Return a high-impact summary of violations.`
                         },
                         {
                             role: "user",
-                            content: JSON.stringify({
-                                report: maskedReport,
-                                preliminaryFindings: forensicIssues
-                            })
+                            content: `JSON DATA: ${JSON.stringify(maskedReport, null, 2)}`
                         }
                     ],
-                    response_format: { type: "json_object" }
+                    response_format: { type: "text" }
                 });
 
-                const content = completion.choices[0].message.content;
-                const aiAnalysis = JSON.parse(content || '{}');
+                const aiSummary = completion.choices[0].message.content || "Manual review recommended.";
 
                 return {
-                    consensusReached: true,
-                    violations: forensicIssues,
-                    confidence: aiAnalysis.confidence || 0.95,
-                    reasoning: aiAnalysis.finalVerdict || "Consensus Reached via LLM.",
-                    estimatedRecovery,
-                    dualLLM: {
-                        forensicOpinion: aiAnalysis.forensicOpinion,
-                        legalOpinion: aiAnalysis.legalOpinion,
-                        consensusConfidence: aiAnalysis.confidence,
-                        finalVerdict: aiAnalysis.finalVerdict
-                    }
+                    forensic_status: 'COMPLETE',
+                    detected_violations: forensicIssues,
+                    ai_audit_opinion: aiSummary,
+                    ai_legal_opinion: "See forensic summary for specific statute citations.",
+                    estimated_score_recovery: estimatedRecovery
                 };
-
             } catch (error) {
                 console.error("[LLMEngine] OpenAI Error:", error);
-                // Fallback to simulation if API fails
             }
         }
 
-        // Fallback / Simulation Mode (if no key or error)
+        // Fallback or Simulation Mode
         return {
-            consensusReached: true,
-            violations: forensicIssues,
-            confidence: 0.98,
-            reasoning: `Forensic scan identified ${forensicIssues.length} violations. Dual-Core consensus simulation verified findings against FCRA/FDCPA benchmarks.`,
-            estimatedRecovery,
-            dualLLM: {
-                forensicOpinion: "Forensic logic scan confirms high probability of inaccuracy errors.",
-                legalOpinion: "Statutory thresholds for dispute actions have been met.",
-                consensusConfidence: 98,
-                finalVerdict: "Proceed with enforcement actions."
-            }
+            forensic_status: 'SIMULATED',
+            detected_violations: forensicIssues,
+            ai_audit_opinion: "Engine running in Forensic Simulation mode. Real-time AI analysis requires OpenAI API activation.",
+            ai_legal_opinion: "Simulation mode active. Verify API key connectivity.",
+            estimated_score_recovery: estimatedRecovery
         };
     },
 
     async chat(prompt: string, context: string): Promise<string> {
         console.log("[LLMEngine] Processing chat query...");
 
-        if (env.OPENAI_API_KEY) {
+        if (env.OPENAI_API_KEY || SERVICE_ACCOUNT_KEY) {
             try {
                 const completion = await openai.chat.completions.create({
                     model: "gpt-4-turbo",
