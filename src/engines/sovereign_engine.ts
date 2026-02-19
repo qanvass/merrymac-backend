@@ -172,12 +172,32 @@ export const sovereignEngine = {
                 console.error(`[SovereignV2] Chunk ${i} extraction failed:`, err);
             }
         }
+        // Update identity and metrics
+        let totalDebt = 0;
+        let totalLimit = 0;
+        let oldestDate = new Date();
+        let totalAgeMonths = 0;
+        let accountCount = 0;
+
+        tradelineMap.forEach(tl => {
+            totalDebt += tl.balance || 0;
+            totalLimit += tl.credit_limit || 0;
+            if (tl.date_opened) {
+                const opened = new Date(tl.date_opened);
+                if (!isNaN(opened.getTime())) {
+                    if (opened < oldestDate) oldestDate = opened;
+                    const months = (new Date().getFullYear() - opened.getFullYear()) * 12 + (new Date().getMonth() - opened.getMonth());
+                    totalAgeMonths += months;
+                    accountCount++;
+                }
+            }
+        });
 
         const canonical: CanonicalCase = {
             case_id: activeCaseId,
             status: 'PROCESSING',
             consumer_identity: {
-                name: "Extracting...",
+                name: "Unknown Consumer",
                 ssn_partial: "XXX-XX-XXXX",
                 dob: null,
                 current_address: "Unknown",
@@ -191,9 +211,9 @@ export const sovereignEngine = {
             raw_text_blocks: [rawText],
             extracted_tables: [],
             metrics: {
-                total_utilization: 0,
-                average_age_of_credit: 0,
-                oldest_account_age: 0,
+                total_utilization: totalLimit > 0 ? Math.round((totalDebt / totalLimit) * 100) : 0,
+                average_age_of_credit: accountCount > 0 ? Math.round(totalAgeMonths / accountCount) : 0,
+                oldest_account_age: accountCount > 0 ? Math.round(((new Date().getTime() - oldestDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44))) : 0,
                 total_inquiries_last_12m: 0
             },
             metadata: {
