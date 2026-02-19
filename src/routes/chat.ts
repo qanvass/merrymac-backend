@@ -1,6 +1,6 @@
 import express from 'express';
-import { llmEngine } from '../engines/llm_engine';
-import { CaseMemory } from '../engines/sovereign_engine';
+import { llmEngine } from '../engine/llm_engine';
+import { CaseMemory } from '../engine/sovereign_engine';
 import { chatMemory } from '../services/chat_memory';
 import { sovereignEmitter } from '../events/sovereign_events';
 

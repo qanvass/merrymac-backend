@@ -1,5 +1,5 @@
 import express from 'express';
-import { forensicEngine } from '../engines/forensic_engine';
+import { forensicEngine } from '../engine/forensic_engine';
 
 const router = express.Router();
 

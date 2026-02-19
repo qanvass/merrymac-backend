@@ -1,6 +1,6 @@
 import express from 'express';
-import { ingestionEngine } from '../engines/ingestion_engine';
-import { sovereignEngine } from '../engines/sovereign_engine';
+import { ingestionEngine } from '../engine/ingestion_engine';
+import { sovereignEngine } from '../engine/sovereign_engine';
 import { sovereignEmitter } from '../events/sovereign_events';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -49,7 +49,7 @@ router.get('/stream/:caseId', (req, res) => {
     // HYDRATION LOGIC: Check if case already exists in memory/Supabase
     // If it does, send the current state immediately.
     // This handles page reloads or reconnects.
-    import('../engines/sovereign_engine').then(async ({ CaseMemory }) => {
+    import('../engine/sovereign_engine').then(async ({ CaseMemory }) => {
         try {
             const existingCase = await CaseMemory.load(caseId);
             if (existingCase) {
