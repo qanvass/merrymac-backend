@@ -1,0 +1,72 @@
+{
+  "case_id": "ec7e8cd3-cfd1-434c-a1e1-96f44fc5daa7",
+  "status": "COMPLETED",
+  "consumer_identity": {
+    "name": "JOHN DOE\nDOB",
+    "ssn_partial": "123-45-6789",
+    "dob": "01/01/1980",
+    "current_address": "Unknown",
+    "previous_addresses": [],
+    "employers": []
+  },
+  "bureau_sources": [
+    "Unknown"
+  ],
+  "tradelines": [
+    {
+      "id": "39d82e6d-bb65-4e2c-84e6-d2cc7ddfd3c6",
+      "bureau": "Unknown",
+      "creditor": "Account Number: 123456789",
+      "account_number": "123456789",
+      "account_type": "Revolving",
+      "status_code": "Open\nBalance",
+      "date_opened": "05/15/2018",
+      "date_last_active": null,
+      "date_of_first_delinquency": null,
+      "date_status": null,
+      "balance": 520,
+      "credit_limit": 5000,
+      "past_due_amount": 0,
+      "payment_history_grid": [],
+      "remarks": [],
+      "is_disputed": false
+    },
+    {
+      "id": "b59657cc-b2e0-4c9b-861a-65d8cfc61371",
+      "bureau": "Unknown",
+      "creditor": "Account Number: 987654321",
+      "account_number": "987654321",
+      "account_type": "Revolving",
+      "status_code": "Charge",
+      "date_opened": "10/10/2015",
+      "date_last_active": null,
+      "date_of_first_delinquency": null,
+      "date_status": null,
+      "balance": 1200,
+      "credit_limit": 2000,
+      "past_due_amount": 0,
+      "payment_history_grid": [],
+      "remarks": [],
+      "is_disputed": false
+    }
+  ],
+  "public_records": [],
+  "inquiries": [],
+  "raw_text_blocks": [
+    "\nName: JOHN DOE\nDOB: 01/01/1980\nSSN: 123-45-6789",
+    "Account Number: 123456789\nChase Bank\nStatus: Open\nBalance: $520.00\nLimit: $5,000.00\nDate Opened: 05/15/2018",
+    "Account Number: 987654321\nBank of America\nStatus: Charge-off\nBalance: $1,200.00\nLimit: $2,000.00\nDate Opened: 10/10/2015\n"
+  ],
+  "extracted_tables": [],
+  "metrics": {
+    "total_utilization": 0,
+    "average_age_of_credit": 0,
+    "oldest_account_age": 0,
+    "total_inquiries_last_12m": 0
+  },
+  "metadata": {
+    "ingestion_date": "2026-02-18T17:30:20.442Z",
+    "file_hash": "hash-placeholder",
+    "processing_time_ms": 0
+  }
+}

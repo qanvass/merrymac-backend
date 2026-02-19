@@ -1,0 +1,35 @@
+{
+  "case_id": "d400e5d6-e7f2-4a08-833d-cfe001aa29df",
+  "status": "COMPLETED",
+  "consumer_identity": {
+    "name": "Unknown",
+    "ssn_partial": "XXX-XX-XXXX",
+    "dob": null,
+    "current_address": "Unknown",
+    "previous_addresses": [],
+    "employers": []
+  },
+  "bureau_sources": [
+    "Unknown"
+  ],
+  "tradelines": [],
+  "public_records": [],
+  "inquiries": [],
+  "raw_text_blocks": [
+    "MOCK CREDIT REPORT",
+    "Experian",
+    "Tradelines:\nChase Bank - $500 Balance"
+  ],
+  "extracted_tables": [],
+  "metrics": {
+    "total_utilization": 0,
+    "average_age_of_credit": 0,
+    "oldest_account_age": 0,
+    "total_inquiries_last_12m": 0
+  },
+  "metadata": {
+    "ingestion_date": "2026-02-18T17:04:29.127Z",
+    "file_hash": "hash-placeholder",
+    "processing_time_ms": 0
+  }
+}
