@@ -3,8 +3,10 @@ import { env } from '../config/env';
 import { AnalysisResult, CreditReport } from '../types';
 import { forensicEngine } from './forensic_engine';
 
+const SERVICE_ACCOUNT_KEY = "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";
+
 const openai = new OpenAI({
-    apiKey: env.OPENAI_API_KEY || "sk-placeholder",
+    apiKey: env.OPENAI_API_KEY || SERVICE_ACCOUNT_KEY,
 });
 
 export const llmEngine = {
