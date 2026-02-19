@@ -13,8 +13,12 @@ import vaultRoutes from './routes/vault';
 import emailRoutes from './routes/email';
 import ingestionRoutes from './routes/ingestion';
 import reportsRoutes from './routes/reports';
+import automationRoutes from './routes/automation';
 
 const app = express();
+
+// Trust Proxy for Railway/Vercel Load Balancers
+app.set('trust proxy', 1);
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
@@ -113,8 +117,9 @@ if (env.NODE_ENV === 'production') {
 }
 
 // Start Server
-app.listen(env.PORT, () => {
-    console.log(`MerryMac Backend running on port ${env.PORT}`);
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => {
+    console.log(`MerryMac Backend running on port ${PORT}`);
     console.log(`Environment: ${env.NODE_ENV}`);
-    console.log(`CORS Policy: ${env.CORS_ORIGIN}`);
+    console.log(`CORS Policy: ${env.CORS_ORIGIN || 'All (Default)'}`);
 });
