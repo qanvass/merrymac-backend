@@ -1,5 +1,5 @@
 import express from 'express';
-import { scoringEngine } from '../engines/scoring_engine';
+import { scoringEngine } from '../engine/scoring_engine';
 
 const router = express.Router();
 
