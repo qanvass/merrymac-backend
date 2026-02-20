@@ -73,15 +73,22 @@ router.get('/stream/:caseId', (req, res) => {
         }
     });
 
+    // Heartbeat: keeps Railway/proxy from closing idle SSE connections during LLM processing
+    const heartbeat = setInterval(() => {
+        res.write(': ping\n\n');
+    }, 20000);
+
     const unsubscribe = sovereignEmitter.subscribe(caseId, (event) => {
         res.write(`data: ${JSON.stringify(event)}\n\n`);
         if (event.phase === 'COMPLETE' || event.phase === 'ERROR') {
+            clearInterval(heartbeat);
             res.end(); // Close connection on completion
         }
     });
 
     req.on('close', () => {
         console.log(`[SSE] Client disconnected for case ${caseId}`);
+        clearInterval(heartbeat);
         unsubscribe();
     });
 });

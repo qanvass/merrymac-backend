@@ -20,6 +20,7 @@ router.post('/query', async (req, res) => {
         // 1. Fetch Case Context from Supabase
         if (caseId) {
             try {
+                // Try legacy CanonicalCase first (cases table)
                 caseData = await CaseMemory.load(caseId);
                 if (caseData) {
                     const findingsText = caseData.findings?.map((f: any) => `- [${f.rule_id}] ${f.description} (Statute: ${f.statute})`).join('\n') || 'None';
@@ -28,13 +29,32 @@ router.post('/query', async (req, res) => {
                     SUBJECT: ${caseData.consumer_identity?.name || 'Unknown'}
                     TRADELINES: ${caseData.tradelines?.length || 0} accounts identified.
                     VIOLATIONS: ${caseData.findings?.length || 0} actionable violations found.
-                    
+
                     FINDINGS SUMMARY:
                     ${findingsText}
-                    
+
                     AI AUDIT OPINION: ${caseData.metadata?.ai_audit_opinion || 'Pending'}
                     AI LEGAL OPINION: ${caseData.metadata?.ai_legal_opinion || 'Pending'}
                     `;
+                } else {
+                    // Fall back to UserCreditProfile (profiles table — written by sovereign engine v2)
+                    const profile = await CaseMemory.loadProfile(caseId);
+                    if (profile) {
+                        const violationsText = profile.activeViolations?.map((v: any) =>
+                            `- [${v.rule_id}] ${v.description} (Statute: ${v.statute})`
+                        ).join('\n') || 'None';
+                        context = `
+                        ACTIVE CASE: ${caseId}
+                        SUBJECT: ${profile.identity?.name || 'Unknown Consumer'}
+                        TRADELINES: ${profile.tradelines?.length || 0} accounts identified.
+                        VIOLATIONS: ${profile.activeViolations?.length || 0} actionable violations found.
+                        TOTAL DEBT: $${profile.metrics?.totalDebt?.toLocaleString() || 0}
+                        UTILIZATION: ${profile.metrics?.utilization || 0}%
+
+                        VIOLATION SUMMARY:
+                        ${violationsText}
+                        `;
+                    }
                 }
             } catch (err) {
                 console.error(`[Chat] Failed to load case ${caseId}:`, err);
