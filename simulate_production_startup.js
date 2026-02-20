@@ -74,7 +74,7 @@ async function run() {
     const test2 = await startServer({
         NODE_ENV: 'production',
         PORT: 3003,
-        OPENAI_API_KEY: 'sk-test-dummy',
+        OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
         CORS_ORIGIN: 'https://merrymac.io',
         EMAIL_USER: 'test',
         EMAIL_PASS: 'test'
