@@ -12,8 +12,10 @@ export const llmEngine = {
         console.log("[SovereignV2] Initiating Dual-Agent Consensus Protocol...");
 
         // 1. Run Deterministic Forensics
-        const { violations: forensicIssues } = await forensicEngine.scanReport(report);
+        const { violations: forensicIssues, scoring: forensicScoring, dualLLM: forensicOpinion } = await forensicEngine.scanReport(report);
         const estimatedRecovery = forensicEngine.calculateScoreRecovery(forensicIssues);
+
+        const baseScore = report.scores?.equifax || report.scores?.transunion || report.scores?.experian || 0;
 
         // 2. Prepare Data for LLM (Masked PII)
         const maskedReport = {
@@ -26,6 +28,7 @@ export const llmEngine = {
         };
 
         // 3. Dual-Agent Swarm Implementation
+        let apiCallFailed = false;
         if (env.OPENAI_API_KEY) {
             try {
                 const completion = await openai.chat.completions.create({
@@ -59,26 +62,28 @@ export const llmEngine = {
                     ai_legal_opinion: "Sovereign Consensus reached. Actionable statutes identified.",
                     estimated_score_recovery: estimatedRecovery,
                     scoring: {
-                        ficoEstimate: 580 + Math.round(Math.random() * 40), // Base estimate + variation
-                        riskLevel: estimatedRecovery > 50 ? 'HIGH' : 'MEDIUM',
-                        removalProbability: 70 + Math.round(Math.random() * 20)
+                        ficoEstimate: baseScore,
+                        riskLevel: forensicScoring.riskLevel,
+                        removalProbability: forensicScoring.removalProbability
                     }
                 };
             } catch (error) {
                 console.error("[LLMEngine] Swarm Error:", error);
+                apiCallFailed = true;
             }
         }
 
         return {
             forensic_status: 'SIMULATED',
+            simulation_reason: apiCallFailed ? 'API_ERROR' : 'KEY_MISSING',
             detected_violations: forensicIssues,
-            ai_audit_opinion: "Engine running in Forensic Simulation mode. Real-time AI analysis requires OpenAI API activation.",
-            ai_legal_opinion: "Simulation mode active. Verify API key connectivity.",
+            ai_audit_opinion: forensicOpinion.forensicOpinion,
+            ai_legal_opinion: forensicOpinion.legalOpinion,
             estimated_score_recovery: estimatedRecovery,
             scoring: {
-                ficoEstimate: 600,
-                riskLevel: 'MEDIUM',
-                removalProbability: 50
+                ficoEstimate: baseScore,
+                riskLevel: forensicScoring.riskLevel,
+                removalProbability: forensicScoring.removalProbability
             }
         };
     },

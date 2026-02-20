@@ -215,6 +215,16 @@ export const sovereignEngine = {
             }
         }
 
+        if (rawExtractions.length === 0) {
+            console.error(`[Sovereign-Spine] CRITICAL: All ${chunks.length} chunks produced zero tradeline extractions.`);
+            sovereignEmitter.emitEvent(activeCaseId, {
+                case_id: activeCaseId,
+                phase: 'ERROR',
+                progress_percentage: 0,
+                message: `Intelligence Spine failed: No tradeline data extracted. LLM key missing or model unavailable.`
+            });
+        }
+
         // --- STAGE 2: NORMALIZATION & CROSS-SCORING ---
         sovereignEmitter.emitEvent(activeCaseId, {
             case_id: activeCaseId,
@@ -305,6 +315,13 @@ export const sovereignEngine = {
             await CaseMemory.saveProfile(profile);
         } catch (err) {
             console.error("[Sovereign-Spine] Persistence Failed:", err);
+            sovereignEmitter.emitEvent(activeCaseId, {
+                case_id: activeCaseId,
+                phase: 'ERROR',
+                progress_percentage: 95,
+                message: `Analysis complete but persistence failed. Data not saved. Check Supabase connectivity.`
+            });
+            return profile;
         }
 
         sovereignEmitter.emitEvent(activeCaseId, {
