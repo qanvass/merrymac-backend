@@ -6,7 +6,7 @@ import { precedentEngine, PrecedentSnippet } from './precedent/precedent_engine'
 import { embeddingEngine, HiveMindStrategy } from './precedent/embedding_engine';
 
 const openai = new OpenAI({
-    apiKey: env.OPENAI_API_KEY,
+    apiKey: env.OPENAI_API_KEY || 'dummy_key',
 });
 
 export const llmEngine = {

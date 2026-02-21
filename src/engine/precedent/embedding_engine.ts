@@ -3,7 +3,7 @@ import { env } from '../../config/env';
 import { supabase } from '../../services/supabase';
 
 const openai = new OpenAI({
-    apiKey: env.OPENAI_API_KEY,
+    apiKey: env.OPENAI_API_KEY || 'dummy_key',
 });
 
 export interface HiveMindStrategy {

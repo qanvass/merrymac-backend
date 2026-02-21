@@ -1,25 +1,44 @@
 import express from 'express';
-import { ingestionEngine } from '../engine/ingestion_engine';
+import multer from 'multer';
+const pdfParse = require('pdf-parse');
+import { requireAuth } from '../middleware/auth_middleware';
 import { sovereignEngine } from '../engine/sovereign_engine';
 import { sovereignEmitter } from '../events/sovereign_events';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 
 router.get('/health', (req, res) => {
     res.json({ status: 'ingestion_active', time: new Date().toISOString() });
 });
 
-router.post('/upload', async (req, res) => {
+router.post('/upload', requireAuth, upload.single('file'), async (req: any, res) => {
     try {
-        const { reportText, pageCount, fileMetadata } = req.body;
+        if (!req.file) {
+            return res.status(400).json({ error: "No PDF file uploaded in 'file' field." });
+        }
 
-        if (!reportText || !pageCount || !fileMetadata) {
-            return res.status(400).json({ error: "Invalid payload. Missing reportText, pageCount, or fileMetadata." });
+        console.log(`[Ingestion] Received PDF: ${req.file.originalname} (${req.file.size} bytes)`);
+
+        // Parse the PDF buffer using pdf-parse
+        let reportText = "";
+        try {
+            const data = await pdfParse(req.file.buffer);
+            reportText = data.text;
+            console.log(`[Ingestion] Extracted ${reportText.length} characters from PDF.`);
+        } catch (parseError) {
+            console.error("[Ingestion] PDF Parsing failed:", parseError);
+            return res.status(422).json({ error: "Could not extract text from the provided PDF. It might be encrypted or corrupted." });
+        }
+
+        if (!reportText || reportText.trim() === "") {
+            return res.status(422).json({ error: "Extracted PDF text is empty." });
         }
 
         const caseId = uuidv4();
+        const fileMetadata = { name: req.file.originalname, size: req.file.size };
 
         // Phase 1: Sovereign Parse (Background)
         // We do NOT await this. We let it run in the background.

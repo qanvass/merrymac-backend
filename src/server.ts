@@ -44,7 +44,9 @@ const allowedOrigins = [
     'https://merrymac.io',
     'https://merrymac-ui.vercel.app',
     'http://localhost:3000',
-    'http://localhost:3001'
+    'http://localhost:3001',
+    'http://localhost:5173',
+    'http://localhost:5174'
 ];
 
 app.use(cors({
@@ -132,6 +134,34 @@ app.post('/api/internal/run-phase3-migration', async (req, res) => {
     const pool = new Pool({
         connectionString: dbUrl,
         ssl: { rejectUnauthorized: false }
+    });
+
+    app.post('/api/internal/run-phase10-migration', async (req, res) => {
+        // Zero-trust internal execution.
+        const dbUrl = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
+        if (!dbUrl) {
+            return res.status(500).json({ error: "No DB URL configured." });
+        }
+
+        const pool = new Pool({
+            connectionString: dbUrl,
+            ssl: { rejectUnauthorized: false }
+        });
+
+        try {
+            const fs = require('fs');
+            const path = require('path');
+            const sqlPath = path.join(__dirname, '../supabase/migrations/02_user_vaults.sql');
+            const sql = fs.readFileSync(sqlPath, 'utf8');
+
+            await pool.query(sql);
+            res.json({ success: true, message: 'Phase 10 Migration applied successfully.' });
+        } catch (e: any) {
+            console.error('Migration failed:', e);
+            res.status(500).json({ error: e.message });
+        } finally {
+            await pool.end();
+        }
     });
 
     try {
