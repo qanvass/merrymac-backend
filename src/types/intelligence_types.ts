@@ -96,6 +96,13 @@ export interface DisputeEntry {
     auditTrailUrl?: string;
 }
 
+export interface DTIProfile {
+    grossAnnualIncome: number | null;
+    monthlyHousingPayment: number | null; // Rent or Mortgage
+    otherMonthlyObligations: number | null; // e.g. Alimony, Child Support
+    calculatedDTI: number | null; // Percentage (e.g. 36)
+}
+
 export interface UserCreditProfile {
     userId: string;
     updatedAt: string;
@@ -130,6 +137,7 @@ export interface UserCreditProfile {
     activeStrategies: EnforcementStrategy[];
 
     // Overall Metrics
+    dtiProfile: DTIProfile;
     metrics: {
         totalDebt: number;
         totalLimit: number;

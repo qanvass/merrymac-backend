@@ -1,0 +1,70 @@
+CREATE TABLE IF NOT EXISTS public.state_statute_of_limitations (
+  state TEXT,
+  debt_type TEXT CHECK (
+    debt_type IN (
+      'written_contract',
+      'open_account',
+      'promissory_note',
+      'oral_contract'
+    )
+  ),
+  years INTEGER NOT NULL,
+  tolling_allowed BOOLEAN DEFAULT true,
+  revival_allowed BOOLEAN DEFAULT true,
+  PRIMARY KEY (state, debt_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sol_state ON public.state_statute_of_limitations (state);
+
+INSERT INTO public.state_statute_of_limitations (state, debt_type, years) VALUES
+('AL','written_contract',6),
+('AK','written_contract',3),
+('AZ','written_contract',6),
+('AR','written_contract',5),
+('CA','written_contract',4),
+('CO','written_contract',6),
+('CT','written_contract',6),
+('DE','written_contract',3),
+('FL','written_contract',5),
+('GA','written_contract',6),
+('HI','written_contract',6),
+('ID','written_contract',5),
+('IL','written_contract',10),
+('IN','written_contract',10),
+('IA','written_contract',10),
+('KS','written_contract',5),
+('KY','written_contract',15),
+('LA','written_contract',10),
+('ME','written_contract',6),
+('MD','written_contract',3),
+('MA','written_contract',6),
+('MI','written_contract',6),
+('MN','written_contract',6),
+('MS','written_contract',3),
+('MO','written_contract',10),
+('MT','written_contract',8),
+('NE','written_contract',5),
+('NV','written_contract',6),
+('NH','written_contract',3),
+('NJ','written_contract',6),
+('NM','written_contract',6),
+('NY','written_contract',6),
+('NC','written_contract',3),
+('ND','written_contract',6),
+('OH','written_contract',8),
+('OK','written_contract',5),
+('OR','written_contract',6),
+('PA','written_contract',4),
+('RI','written_contract',10),
+('SC','written_contract',3),
+('SD','written_contract',6),
+('TN','written_contract',6),
+('TX','written_contract',4),
+('UT','written_contract',6),
+('VT','written_contract',6),
+('VA','written_contract',5),
+('WA','written_contract',6),
+('WV','written_contract',10),
+('WI','written_contract',6),
+('WY','written_contract',10)
+ON CONFLICT (state, debt_type) DO NOTHING;

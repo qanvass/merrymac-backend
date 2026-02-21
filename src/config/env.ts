@@ -15,6 +15,7 @@ const envSchema = z.object({
     EMAIL_HOST: z.string().default('smtp.gmail.com'),
     ADMIN_EMAIL: z.string().optional(),
     CORS_ORIGIN: z.string().default('*'),
+    COURTLISTENER_API_KEY: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

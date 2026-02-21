@@ -33,19 +33,25 @@ class EmailService {
         }
     }
 
-    async sendEmail(to: string, subject: string, body: string) {
+    async sendEmail(to: string, subject: string, body: string, isHtml: boolean = false) {
         if (!this.transporter) {
             console.log(`[Email-Mock] To: ${to} | Subject: ${subject}`);
             return { success: true, mock: true };
         }
 
         try {
-            const info = await this.transporter.sendMail({
+            const mailOptions: any = {
                 from: `"MerryMac Agent" <${this.config.user}>`,
                 to,
-                subject,
-                text: body
-            });
+                subject
+            };
+            if (isHtml) {
+                mailOptions.html = body;
+            } else {
+                mailOptions.text = body;
+            }
+
+            const info = await this.transporter.sendMail(mailOptions);
             return { success: true, messageId: info.messageId };
         } catch (error: any) {
             console.error("[Email] Send Error:", error);

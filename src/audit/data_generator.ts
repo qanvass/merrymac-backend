@@ -36,6 +36,12 @@ export class DataGenerator {
             activeFindings: [],
             activeViolations: [],
             activeStrategies: [],
+            dtiProfile: {
+                grossAnnualIncome: null,
+                monthlyHousingPayment: null,
+                otherMonthlyObligations: null,
+                calculatedDTI: null
+            },
             metrics: {
                 totalDebt: 0,
                 totalLimit: 0,

@@ -15,6 +15,8 @@ import ingestionRoutes from './routes/ingestion';
 import reportsRoutes from './routes/reports';
 import automationRoutes from './routes/automation';
 import chatRoutes from './routes/chat';
+import dossierRoutes from './routes/dossier';
+import { referralRoutes } from './routes/referral';
 
 const app = express();
 
@@ -77,6 +79,8 @@ app.use('/api/scoring', scoringRoutes);
 app.use('/api/llm', llmRoutes);
 app.use('/api/vault', vaultRoutes);
 app.use('/api/email', emailRoutes);
+app.use('/api/dossier', dossierRoutes);
+app.use('/api/referral', referralRoutes);
 // Phase 1: Secure Intake & Phase 8: Data Retrieval
 app.use('/api/ingestion', (req, res, next) => {
     console.log(`[Ingestion Route Hit] ${req.method} ${req.url}`);
@@ -246,6 +250,11 @@ if (env.NODE_ENV === 'production') {
         if (!env.CORS_ORIGIN) throw new Error("❌ CRITICAL: CORS_ORIGIN is missing in production.");
     }
 }
+
+// Phase 11K: Global Promise Rejection Monitor
+process.on('unhandledRejection', (reason) => {
+    console.error('[🚨 UNHANDLED PROMISE REJECTION]', reason);
+});
 
 // Start Server
 const PORT = process.env.PORT || 8080;

@@ -291,6 +291,12 @@ export const sovereignEngine = {
             activeFindings: [],
             activeViolations: [],
             activeStrategies: [],
+            dtiProfile: {
+                grossAnnualIncome: null,
+                monthlyHousingPayment: null,
+                otherMonthlyObligations: null,
+                calculatedDTI: null
+            },
             metrics: {
                 totalDebt: tradelines.reduce((s, t) => s + t.balance.value, 0),
                 totalLimit: tradelines.reduce((s, t) => s + t.creditLimit.value, 0),

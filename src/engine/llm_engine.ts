@@ -2,6 +2,8 @@ import OpenAI from 'openai';
 import { env } from '../config/env';
 import { AnalysisResult, CreditReport } from '../types';
 import { forensicEngine } from './forensic_engine';
+import { precedentEngine, PrecedentSnippet } from './precedent/precedent_engine';
+import { embeddingEngine, HiveMindStrategy } from './precedent/embedding_engine';
 
 const openai = new OpenAI({
     apiKey: env.OPENAI_API_KEY,
@@ -27,6 +29,30 @@ export const llmEngine = {
             judgments: report.publicRecords
         };
 
+        // 2b. Extract Unique Creditors for RAG context
+        const uniqueCreditors = Array.from(new Set(report.tradelines.map(t => t.creditor)));
+        const allPrecedents: PrecedentSnippet[] = [];
+        const hiveMindStrategies: HiveMindStrategy[] = [];
+
+        // Ensure we don't bombard the API and hit rate limits if there are many creditors
+        for (const creditor of uniqueCreditors.slice(0, 3)) {
+            // 1. Fetch External Case Law
+            const cases = await precedentEngine.searchRelevantCaseLaw(creditor, ["FCRA", "FDCPA"]);
+            allPrecedents.push(...cases);
+
+            // 2. Fetch Internal Hive-Mind Successful Strategies (pgvector RAG)
+            const internalStrats = await embeddingEngine.searchHiveMind(creditor, 0.70, 2);
+            hiveMindStrategies.push(...internalStrats);
+        }
+
+        const caseLawContext = allPrecedents.length > 0
+            ? `\nRELEVANT PUBLIC PRECEDENTS TO CITE:\n${allPrecedents.map((p, i) => `[${i + 1}] ${p.caseName} (${p.dateFiled}): ${p.snippet}\nURL: ${p.url}`).join('\n\n')}`
+            : `\nRELEVANT PUBLIC PRECEDENTS TO CITE:\nNo specific cases found via public RAG for these creditors. Rely on general statutory limits.`;
+
+        const hiveMindContext = hiveMindStrategies.length > 0
+            ? `\nPROPRIETARY HIVE-MIND SUCCESSFUL STRATEGIES AGAINST THESE CREDITORS:\n${hiveMindStrategies.map((s, i) => `[Strategy ${i + 1}] Against ${s.creditorName} (${s.statuteCategory}):\nAction: ${s.disputeStrategyNarrative}\nOutcome: ${s.successfulOutcomeDescription}`).join('\n\n')}`
+            : `\nPROPRIETARY HIVE-MIND SUCCESSFUL STRATEGIES:\nNo internal precedents found yet. You must establish the winning strategy.`;
+
         // 3. Dual-Agent Swarm Implementation
         let apiCallFailed = false;
         if (env.OPENAI_API_KEY) {
@@ -42,8 +68,12 @@ export const llmEngine = {
                             
                             PROTOCOL:
                             1. Auditor lists potential issues.
-                            2. Counsel filters for legally actionable violations.
-                            3. Aggregate into a cohesive 'Sovereign Consensus'.`
+                            2. Counsel filters for legally actionable violations and aggressively CITES the provided Relevant Precedents.
+                            3. Aggregate into a cohesive 'Sovereign Consensus'.
+                            
+                            ${caseLawContext}
+
+                            ${hiveMindContext}`
                         },
                         {
                             role: "user",
@@ -131,7 +161,8 @@ export const llmEngine = {
                             ${context}
                             
                             CRITICAL: Be professional, aggressive in dispute strategy, and always cite relevant statutes. 
-                            Use the provided conversation history to maintain context and continuity.`
+                            Use the provided conversation history to maintain context and continuity.
+                            NOTE: If the user asks about case law, you MUST use RAG-retrieved precedents if they were placed into context, or fallback to your internal training data otherwise.`
                         },
                         ...historyMessages,
                         { role: "user", content: prompt }
