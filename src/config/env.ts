@@ -10,6 +10,7 @@ const envSchema = z.object({
     OPENAI_API_KEY: z.string().optional(),
     SUPABASE_URL: z.string().optional(),
     SUPABASE_KEY: z.string().optional(),
+    SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
     EMAIL_USER: z.string().optional(),
     EMAIL_PASS: z.string().optional(),
     EMAIL_HOST: z.string().default('smtp.gmail.com'),

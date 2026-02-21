@@ -17,6 +17,7 @@ import automationRoutes from './routes/automation';
 import chatRoutes from './routes/chat';
 import dossierRoutes from './routes/dossier';
 import { referralRoutes } from './routes/referral';
+import authRoutes from './routes/auth';
 
 const app = express();
 
@@ -74,6 +75,7 @@ app.get('/health', (req, res) => {
 });
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/forensic', forensicRoutes);
 app.use('/api/scoring', scoringRoutes);
 app.use('/api/llm', llmRoutes);
