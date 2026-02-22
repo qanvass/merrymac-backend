@@ -97,17 +97,16 @@ export class CaseMemory {
         if (!supabase) throw new Error("Supabase Disconnected");
 
         const { error } = await supabase
-            .from('profiles') // Assuming a profiles table for UserCreditProfile
+            .from('credit_profiles')
             .upsert({
                 id: profile.userId,
-                data: profile,
+                profile_data: profile,
                 updated_at: new Date().toISOString()
             });
 
         if (error) {
-            // Fallback to cases table if profiles doesn't exist yet, or just log
             console.error("Supabase Save Profile Error:", error);
-            // For now, let's keep it robust by allowing overlap or separate table
+            throw new Error(`PROFILE_PERSISTENCE_FAILURE: ${error.message}`);
         }
 
         console.log(`[Supabase] Profile for ${profile.userId} UPSERTED.`);
@@ -117,8 +116,8 @@ export class CaseMemory {
         if (!supabase) return null;
 
         const { data, error } = await supabase
-            .from('profiles')
-            .select('data')
+            .from('credit_profiles')
+            .select('profile_data')
             .eq('id', userId)
             .single();
 
@@ -127,7 +126,7 @@ export class CaseMemory {
             return null;
         }
 
-        return data.data as UserCreditProfile;
+        return data.profile_data as UserCreditProfile;
     }
 
     static async load(caseId: string): Promise<CanonicalCase | null> {

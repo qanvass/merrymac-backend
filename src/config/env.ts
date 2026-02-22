@@ -8,6 +8,7 @@ const envSchema = z.object({
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
     API_BASE_URL: z.string().default('http://localhost:3001'),
     OPENAI_API_KEY: z.string().optional(),
+    OPENAI_MODEL: z.string().default('gpt-4o'),
     SUPABASE_URL: z.string().optional(),
     SUPABASE_KEY: z.string().optional(),
     SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),

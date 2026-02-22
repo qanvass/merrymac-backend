@@ -58,7 +58,7 @@ export const llmEngine = {
         if (env.OPENAI_API_KEY) {
             try {
                 const completion = await openai.chat.completions.create({
-                    model: "gpt-4-turbo",
+                    model: env.OPENAI_MODEL,
                     messages: [
                         {
                             role: "system",
@@ -97,8 +97,9 @@ export const llmEngine = {
                         removalProbability: forensicScoring.removalProbability
                     }
                 };
-            } catch (error) {
-                console.error("[LLMEngine] Swarm Error:", error);
+            } catch (error: any) {
+                const detail = error?.response?.data || error?.message || error;
+                console.error("[LLMEngine] Swarm Error:", detail);
                 apiCallFailed = true;
             }
         }
@@ -126,14 +127,15 @@ export const llmEngine = {
 
         try {
             const completion = await openai.chat.completions.create({
-                model: "gpt-4-turbo",
+                model: env.OPENAI_MODEL,
                 messages: [{ role: "user", content: prompt }],
                 response_format: { type: "json_object" }
             });
 
             return JSON.parse(completion.choices[0].message.content || '{}');
-        } catch (error) {
-            console.error("[LLMEngine] Extraction Error:", error);
+        } catch (error: any) {
+            const detail = error?.response?.data || error?.message || error;
+            console.error("[LLMEngine] Extraction Error:", detail);
             return null;
         }
     },
@@ -150,11 +152,11 @@ export const llmEngine = {
                 }));
 
                 const completion = await openai.chat.completions.create({
-                    model: "gpt-4-turbo",
+                    model: env.OPENAI_MODEL,
                     messages: [
                         {
                             role: "system",
-                            content: `You are the MerryMac Sovereign Oracle. 
+                            content: `You are the MerryMac Sovereign Oracle.
                             Your goal is to provide expert-level forensic analysis and legal guidance.
                             
                             CASE CONTEXT:
@@ -169,10 +171,12 @@ export const llmEngine = {
                     ]
                 });
                 return completion.choices[0].message.content || "I am unable to process that at the moment.";
-            } catch (error) {
-                console.error("[LLMEngine] Chat API Error:", error);
+            } catch (error: any) {
+                const detail = error?.response?.data || error?.message || error;
+                console.error("[LLMEngine] Chat API Error:", detail);
+                throw new Error(`LLM_API_FAILURE: ${detail}`);
             }
         }
-        return "Sovereign Mode is currently running in simulation.";
+        return "Sovereign Mode is currently running in simulation. Set OPENAI_API_KEY to enable.";
     }
 };

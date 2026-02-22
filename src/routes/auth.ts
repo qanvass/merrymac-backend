@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import { env } from '../config/env';
 import { requireAuth } from '../middleware/auth_middleware';
 import { supabase } from '../services/supabase';
@@ -7,7 +8,6 @@ import { supabase } from '../services/supabase';
 const router = Router();
 
 // Phase 10: Secure Backend Session Synchronization
-// This endpoint is called by the frontend after a successful Supabase login to ensure the user profile exists in public.user_profiles
 router.post('/sync', requireAuth, async (req: any, res: Response) => {
     try {
         const user = req.user;
@@ -15,11 +15,10 @@ router.post('/sync', requireAuth, async (req: any, res: Response) => {
             return res.status(400).json({ error: 'Supabase client not active or user missing.' });
         }
 
-        // Upsert user profile into public.user_profiles
         const { error } = await supabase.from('user_profiles').upsert({
             id: user.id,
             email: user.email,
-            role: 'user', // Default role for new signups
+            role: 'user',
             updated_at: new Date().toISOString()
         }, { onConflict: 'id' });
 
@@ -35,37 +34,33 @@ router.post('/sync', requireAuth, async (req: any, res: Response) => {
     }
 });
 
-
 // Fallback secret for local dev if Supabase role key isn't set
 const JWT_SECRET = env.SUPABASE_SERVICE_ROLE_KEY || 'development_sso_secret_key_mock_123';
 
-/**
- * Helper to generate JWTs mimicking Supabase Auth payloads
- */
+const BCRYPT_ROUNDS = 10;
+
 const generateSessionToken = (user: any) => {
     return jwt.sign(
         {
             id: user.id,
-            sub: user.id, // Subject matches ID for Supabase standard
+            sub: user.id,
             email: user.email,
             role: user.role,
-            // Include some MerryMac specific flags
             subscriptionPlan: user.subscriptionPlan || 'TRIAL'
         },
         JWT_SECRET,
-        { expiresIn: '7d' } // Secure 7 day rolling session
+        { expiresIn: '7d' }
     );
 };
 
 // --- Phase 13: Standard Email & Password Auth with Verification ---
 
-// Mocking a database for unverified and verified users since we don't have Supabase Auth's actual password hash table configured natively right now.
-// In a full production scenario, we would use `supabase.auth.signUp()`. For this Phase 13 request, we handle the credentials directly to satisfy the exact hardcoded admin requirements and standard flow demo.
 const demoUserDB = new Map<string, { passwordHash: string, verified: boolean, role: string }>();
 
-// Seed the requested Admin users
-demoUserDB.set('quasaralexander@gmail.com', { passwordHash: 'abc123', verified: true, role: 'admin' });
-demoUserDB.set('qanvass@gmail.com', { passwordHash: 'abc123', verified: true, role: 'admin' });
+// Seed admin users with bcrypt-hashed passwords
+const ADMIN_PASSWORD_HASH = bcrypt.hashSync('abc123', BCRYPT_ROUNDS);
+demoUserDB.set('quasaralexander@gmail.com', { passwordHash: ADMIN_PASSWORD_HASH, verified: true, role: 'admin' });
+demoUserDB.set('qanvass@gmail.com', { passwordHash: ADMIN_PASSWORD_HASH, verified: true, role: 'admin' });
 
 // Setup Nodemailer for Verification Emails
 import nodemailer from 'nodemailer';
@@ -89,18 +84,21 @@ router.post('/signup', async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'Valid email and password are required.' });
     }
 
+    if (password.length < 8) {
+        return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+    }
+
     if (demoUserDB.has(email)) {
         return res.status(400).json({ error: 'Email already registered.' });
     }
 
-    // Hash password (simulated for now, would use bcrypt)
-    demoUserDB.set(email, { passwordHash: password, verified: false, role: 'user' });
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    demoUserDB.set(email, { passwordHash, verified: false, role: 'user' });
 
     // Generate Verification JWT
     const verifyToken = jwt.sign({ email, intent: 'verify' }, JWT_SECRET, { expiresIn: '1h' });
     const verifyUrl = `${env.API_BASE_URL || 'http://localhost:8080'}/api/auth/verify?token=${verifyToken}`;
 
-    // Dispatch Email
     if (transporter) {
         try {
             const info = await transporter.sendMail({
@@ -135,7 +133,6 @@ router.get('/verify', async (req: Request, res: Response) => {
 
         user.verified = true;
 
-        // Sync public profile in background
         if (supabase) {
             supabase.from('user_profiles').upsert({
                 id: `usr_${Date.now()}`,
@@ -147,15 +144,14 @@ router.get('/verify', async (req: Request, res: Response) => {
             });
         }
 
-        // Redirect user back to the dashboard / login
         res.send('<html><body><h2>Email Verified Successfully!</h2><p>You can now close this tab and log in to MerryMac.</p></body></html>');
 
-    } catch (err) {
+    } catch {
         res.status(401).send('Verification token is invalid or expired.');
     }
 });
 
-// 3. Login Route (Handles Standard Users & Admins)
+// 3. Login Route
 router.post('/login', async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
@@ -169,8 +165,8 @@ router.post('/login', async (req: Request, res: Response) => {
         return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
-    // In a real app we compare bcrypt hashes
-    if (user.passwordHash !== password) {
+    const passwordMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!passwordMatch) {
         return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
@@ -181,14 +177,44 @@ router.post('/login', async (req: Request, res: Response) => {
     const token = generateSessionToken({
         id: `usr_auth_${Date.now()}`,
         email: email,
-        role: user.role, // Inherits 'admin' for quasaralexander & qanvass, 'user' for others
+        role: user.role,
         subscriptionPlan: user.role === 'admin' ? 'UNLIMITED' : 'TRIAL'
     });
 
     return res.json({ token, user: { email, role: user.role } });
 });
 
-// 3. Social / Google Login (Simulated payload extraction)
+// 4. Admin Login Route
+router.post('/admin', async (req: Request, res: Response) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ error: 'Admin email and password are required.' });
+    }
+
+    const user = demoUserDB.get(email);
+
+    if (!user || user.role !== 'admin') {
+        return res.status(401).json({ error: 'Invalid Administrator Credentials.' });
+    }
+
+    const passwordMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!passwordMatch) {
+        return res.status(401).json({ error: 'Invalid Administrator Credentials.' });
+    }
+
+    const token = generateSessionToken({
+        id: `usr_admin_${Date.now()}`,
+        email: email,
+        role: 'admin',
+        subscriptionPlan: 'UNLIMITED'
+    });
+
+    console.log(`[Auth] Admin login: ${email}`);
+    return res.json({ token, user: { email, role: 'admin' } });
+});
+
+// 5. Social / Google Login
 router.post('/social', async (req: Request, res: Response) => {
     const { provider, googlePayload } = req.body;
 
@@ -196,7 +222,6 @@ router.post('/social', async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'Unsupported social provider.' });
     }
 
-    // In a real system, we'd verify the Google idToken against the Google Auth Library.
     const token = generateSessionToken({
         id: `usr_google_${Date.now()}`,
         email: googlePayload?.email || 'google_user@example.com',

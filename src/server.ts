@@ -124,8 +124,9 @@ app.use('/api/chat', chatRoutes);
 
 // TEMPORARY PHASE 3 MIGRATION ENDPOINT (OPTION 3)
 import { Pool } from 'pg';
-app.post('/api/internal/run-phase3-migration', async (req, res) => {
-    // Zero-trust internal execution.
+
+// Phase 10 Migration — must be registered at top level, not nested
+app.post('/api/internal/run-phase10-migration', async (_req, res) => {
     const dbUrl = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
     if (!dbUrl) {
         return res.status(500).json({ error: "No DB URL configured." });
@@ -136,32 +137,32 @@ app.post('/api/internal/run-phase3-migration', async (req, res) => {
         ssl: { rejectUnauthorized: false }
     });
 
-    app.post('/api/internal/run-phase10-migration', async (req, res) => {
-        // Zero-trust internal execution.
-        const dbUrl = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
-        if (!dbUrl) {
-            return res.status(500).json({ error: "No DB URL configured." });
-        }
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        const sqlPath = path.join(__dirname, '../supabase/migrations/02_user_vaults.sql');
+        const sql = fs.readFileSync(sqlPath, 'utf8');
 
-        const pool = new Pool({
-            connectionString: dbUrl,
-            ssl: { rejectUnauthorized: false }
-        });
+        await pool.query(sql);
+        res.json({ success: true, message: 'Phase 10 Migration applied successfully.' });
+    } catch (e: any) {
+        console.error('Migration failed:', e);
+        res.status(500).json({ error: e.message });
+    } finally {
+        await pool.end();
+    }
+});
 
-        try {
-            const fs = require('fs');
-            const path = require('path');
-            const sqlPath = path.join(__dirname, '../supabase/migrations/02_user_vaults.sql');
-            const sql = fs.readFileSync(sqlPath, 'utf8');
+app.post('/api/internal/run-phase3-migration', async (_req, res) => {
+    // Zero-trust internal execution.
+    const dbUrl = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
+    if (!dbUrl) {
+        return res.status(500).json({ error: "No DB URL configured." });
+    }
 
-            await pool.query(sql);
-            res.json({ success: true, message: 'Phase 10 Migration applied successfully.' });
-        } catch (e: any) {
-            console.error('Migration failed:', e);
-            res.status(500).json({ error: e.message });
-        } finally {
-            await pool.end();
-        }
+    const pool = new Pool({
+        connectionString: dbUrl,
+        ssl: { rejectUnauthorized: false }
     });
 
     try {
