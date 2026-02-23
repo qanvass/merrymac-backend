@@ -22,21 +22,6 @@ export const requireAuth = async (req: AuthenticatedRequest, res: Response, next
     const token = authHeader.split(' ')[1];
 
     try {
-        // If Supabase is fully configured, verify using the official client
-        if (supabase) {
-            const { data: { user }, error } = await supabase.auth.getUser(token);
-
-            if (error || !user) {
-                console.warn(`[Auth] Supabase Auth Rejected: ${error?.message || 'Unknown Error'}`);
-                return res.status(401).json({ error: 'Unauthorized. Invalid Supabase session token.' });
-            }
-
-            // Attach the verified user to the request object
-            req.user = user;
-            return next();
-        }
-
-        // Fallback: Verify the token using the secret map if Supabase client is null
         const secret = env.SUPABASE_SERVICE_ROLE_KEY || 'development_sso_secret_key_mock_123';
         const decoded = jwt.verify(token, secret) as any;
 
@@ -65,14 +50,6 @@ export const optionalAuth = async (req: AuthenticatedRequest, res: Response, nex
     const token = authHeader.split(' ')[1];
 
     try {
-        if (supabase) {
-            const { data: { user } } = await supabase.auth.getUser(token);
-            if (user) {
-                req.user = user;
-            }
-            return next();
-        }
-
         const secret = env.SUPABASE_SERVICE_ROLE_KEY || 'development_sso_secret_key_mock_123';
         const decoded = jwt.verify(token, secret) as any;
         req.user = {
